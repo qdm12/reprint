@@ -49,9 +49,9 @@ func main() {
     type myType struct{ A *int }
 
     // reprint.FromTo usage:
-    x := &myType{&one}
-    y := new(myType)
-    reprint.FromTo(x, y)
+    var x, y myType
+    x.A = &one
+    reprint.FromTo(&x, &y)
     y.A = &two
     fmt.Println(x.A, *x.A) // 0xc0000a0010 1
     fmt.Println(y.A, *y.A) // 0xc0000a0018 2
