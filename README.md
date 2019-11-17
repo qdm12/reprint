@@ -1,6 +1,6 @@
 # Reprint
 
-*Reprint is a Go library to deep copy any object THE RIGHT WAY TM*
+*Reprint is a Go library to deep copy any object THE RIGHT WAY :tm:*
 
 [![reprint](https://github.com/qdm12/reprint/raw/master/title.png)](https://hub.docker.com/r/qmcgaw/REPONAME_DOCKER)
 
@@ -10,6 +10,22 @@
 [![GitHub commit activity](https://img.shields.io/github/commit-activity/y/qdm12/reprint.svg)](https://github.com/qdm12/reprint/issues)
 [![GitHub issues](https://img.shields.io/github/issues/qdm12/reprint.svg)](https://github.com/qdm12/reprint/issues)
 
+## Features
+
+Unlike most libraries out there, this one deep copies by assigning new pointers to all data structures
+nested in a given object, hence doing it **THE RIGHT WAY :tm:**
+
+It works with:
+
+- slices
+- maps
+- pointers
+- nested pointers
+- structs (even with unexported fields)
+- functions (cannot change the pointer though)
+- channels **soon**
+- arrays **soon**
+
 ## Setup
 
 ```sh
@@ -18,6 +34,41 @@ go get -u github.com/qdm12/reprint
 
 ## Usage
 
+```go
+package main
+
+import (
+    "fmt"
+
+    "github.com/qdm12/reprint"
+)
+
+func main() {
+    one := 1
+    two := 2
+    type myType struct{ A *int }
+
+    // reprint.FromTo usage:
+    x := &myType{&one}
+    y := new(myType)
+    reprint.FromTo(x, y)
+    y.A = &two
+    fmt.Println(x.A, *x.A) // 0xc0000a0010 1
+    fmt.Println(y.A, *y.A) // 0xc0000a0018 2
+
+    // reprint.This usage:
+    x2 := myType{&one}
+    out := reprint.This(x2)
+    y2 := out.(myType)
+    y2.A = &two
+    fmt.Println(x2.A, *x2.A) // 0xc0000a0010 1
+    fmt.Println(y2.A, *y2.A) // 0xc0000a0018 2
+}
+```
+
+## Limits
+
+- Does not support `UintPtr` and `UnsafePointer` types (untested)
 
 ## Development
 
@@ -30,7 +81,9 @@ go get -u github.com/qdm12/reprint
 
 ## TODOs
 
-- Write usage readme
+- Verify it works for types:
+    - [x] Func
+    - [ ] Chan
+    - [ ] Array
 - Finish `FromTo` corner cases (nil pointers etc.)
-- `forceCopyValue` might not be needed, test with func, channels etc.
-- Verify no dereferencing is needed for types: Func, Chan, UintPtr, UnsafePointer, Array
+- `forceCopyValue` might not be needed

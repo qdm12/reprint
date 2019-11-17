@@ -1,12 +1,33 @@
 package reprint
 
 import (
+	"fmt"
 	"reflect"
+	"regexp"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+var addressSearch = regexp.MustCompile(`0x[0-9a-f]+`).Find
+
+func getAddressOf(obj interface{}) string {
+	s := fmt.Sprintf("%p", obj)
+	b := addressSearch([]byte(s))
+	if b == nil {
+		return getAddressOf(&obj)
+	}
+	return string(b)
+}
+
+func assertAddressesAreDifferent(t *testing.T, obj1, obj2 interface{}) {
+	ptr1 := getAddressOf(obj1)
+	ptr2 := getAddressOf(obj2)
+	if ptr1 == ptr2 {
+		t.Errorf("pointers of %#v and %#v are equal: %s and %s", obj1, obj2, ptr1, ptr2)
+	}
+}
 
 // Pretty much an integration test
 func Test_deepCopy(t *testing.T) {
@@ -116,7 +137,7 @@ func Test_FromTo(t *testing.T) {
 		original := customType{&one}
 		err := FromTo(original, nil)
 		require.Error(t, err)
-		require.Equal(t, err.Error(), "")
+		require.Equal(t, err.Error(), "FromTo: copy target is nil, it should be a valid pointer")
 	})
 	// t.Run("nil pointer to pointer", func(t *testing.T) {
 	// 	t.Parallel()
@@ -160,8 +181,10 @@ func Test_forceCopyValue(t *testing.T) {
 
 func Test_deepCopySlice(t *testing.T) {
 	t.Parallel()
+	// empty slice pointer does not change
+	// but that is ok as appending would create
+	// another slice
 	tests := map[string]interface{}{
-		"empty slice":       []int{},
 		"slice with nil":    []*int{nil},
 		"slice of integers": []int{1, 2, 3},
 		"slice of pointers": []int{1, 2, 3},
@@ -172,12 +195,10 @@ func Test_deepCopySlice(t *testing.T) {
 			t.Parallel()
 			original := reflect.ValueOf(tc)
 			copy := deepCopySlice(original)
-			if original == copy {
-				t.Errorf("pointers %s and %s are the same", original, copy)
-			}
 			require.True(t, copy.CanInterface())
 			copyInterface := copy.Interface()
 			assert.Equal(t, tc, copyInterface)
+			assertAddressesAreDifferent(t, tc, copyInterface)
 		})
 	}
 }
@@ -194,11 +215,9 @@ func Test_deepCopyMap(t *testing.T) {
 			t.Parallel()
 			original := reflect.ValueOf(tc)
 			copy := deepCopyMap(original)
-			if &original == &copy {
-				t.Fatalf("pointers %s and %s are the same", &original, &copy)
-			}
 			require.True(t, copy.CanInterface())
 			copyInterface := copy.Interface()
+			assertAddressesAreDifferent(t, tc, copyInterface)
 			assert.Equal(t, tc, copyInterface)
 		})
 	}
@@ -222,8 +241,8 @@ func Test_deepCopyPointer(t *testing.T) {
 			copy := deepCopyPointer(original)
 			require.True(t, copy.CanInterface())
 			copyInterface := copy.Interface()
-			if tc == copyInterface && tc != nilPtr {
-				t.Errorf("pointers %p and %p are the same", tc, copyInterface)
+			if tc != nilPtr {
+				assertAddressesAreDifferent(t, tc, copyInterface)
 			}
 			assert.Equal(t, tc, copyInterface)
 		})
@@ -251,12 +270,24 @@ func Test_deepCopyStruct(t *testing.T) {
 			t.Parallel()
 			original := reflect.ValueOf(tc)
 			copy := deepCopyStruct(original)
-			if &original == &copy {
-				t.Fatalf("pointers %s and %s are the same", &original, &copy)
-			}
 			require.True(t, copy.CanInterface())
 			copyInterface := copy.Interface()
 			assert.Equal(t, tc, copyInterface)
+			assertAddressesAreDifferent(t, tc, copyInterface)
 		})
 	}
+}
+
+func Test_deepCopyFunc(t *testing.T) {
+	t.Parallel()
+	f := func(a int) int { return a + 1 }
+	original := reflect.ValueOf(f)
+	copy := deepCopy(original)
+	require.True(t, copy.CanInterface())
+	copyInterface := copy.Interface()
+	g, ok := copyInterface.(func(a int) int)
+	require.True(t, ok)
+	assert.Equal(t, f(0), g(0))
+	g = func(a int) int { return a + 2 }
+	assert.NotEqual(t, f(0), g(0))
 }
