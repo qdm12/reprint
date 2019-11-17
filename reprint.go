@@ -51,6 +51,10 @@ func deepCopy(original reflect.Value) reflect.Value {
 		return deepCopyPointer(original)
 	case reflect.Struct:
 		return deepCopyStruct(original)
+	case reflect.Chan:
+		return deepCopyChan(original)
+	case reflect.Array:
+		return deepCopyArray(original)
 	default:
 		return forceCopyValue(original)
 	}
@@ -71,6 +75,22 @@ func deepCopySlice(original reflect.Value) reflect.Value {
 	for i := 0; i < original.Len(); i++ {
 		elementCopy := deepCopy(original.Index(i))
 		copy = reflect.Append(copy, elementCopy)
+	}
+	return copy
+}
+
+func deepCopyArray(original reflect.Value) reflect.Value {
+	if original.Len() == 0 {
+		// cannot change it anyway, so we can return the original
+		return original
+	}
+	elementType := original.Index(0).Type()
+	arrayType := reflect.ArrayOf(original.Len(), elementType)
+	newPointer := reflect.New(arrayType)
+	copy := newPointer.Elem()
+	for i := 0; i < original.Len(); i++ {
+		subCopy := deepCopy(original.Index(i))
+		copy.Index(i).Set(subCopy)
 	}
 	return copy
 }
@@ -107,4 +127,10 @@ func deepCopyStruct(original reflect.Value) reflect.Value {
 		fieldValue.Set(deepCopy(fieldValue))
 	}
 	return copy
+}
+
+func deepCopyChan(original reflect.Value) reflect.Value {
+	// TODO maybe change references of elements inside channel?
+	// beware of race conditions?
+	return reflect.MakeChan(original.Type(), original.Cap())
 }

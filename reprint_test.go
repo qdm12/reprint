@@ -158,51 +158,130 @@ func Test_FromTo(t *testing.T) {
 func Test_forceCopyValue(t *testing.T) {
 	t.Parallel()
 	one := 1
-	tests := map[string]interface{}{
-		"integer":            one,
-		"pointer to integer": &one,
-		"string":             "a",
-	}
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
-			tc := tc
-			t.Parallel()
-			original := reflect.ValueOf(tc)
-			copy := forceCopyValue(original)
-			require.True(t, copy.CanInterface())
-			copyInterface := copy.Interface()
-			if &original == &copy {
-				t.Errorf("pointers %s and %s are the same", &original, &copy)
-			}
-			assert.Equal(t, tc, copyInterface)
-		})
-	}
+	t.Run("integer", func(t *testing.T) {
+		t.Parallel()
+		original := reflect.ValueOf(one)
+		copy := forceCopyValue(original)
+		require.True(t, copy.CanInterface())
+		copyInterface := copy.Interface()
+		assert.Equal(t, one, copyInterface)
+		assertAddressesAreDifferent(t, one, copyInterface)
+	})
+	t.Run("string", func(t *testing.T) {
+		t.Parallel()
+		s := "a"
+		original := reflect.ValueOf(s)
+		copy := forceCopyValue(original)
+		require.True(t, copy.CanInterface())
+		copyInterface := copy.Interface()
+		assert.Equal(t, s, copyInterface)
+		assertAddressesAreDifferent(t, s, copyInterface)
+	})
 }
 
 func Test_deepCopySlice(t *testing.T) {
 	t.Parallel()
-	// empty slice pointer does not change
-	// but that is ok as appending would create
-	// another slice
-	tests := map[string]interface{}{
-		"slice with nil":    []*int{nil},
-		"slice of integers": []int{1, 2, 3},
-		"slice of pointers": []int{1, 2, 3},
-	}
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
-			tc := tc
-			t.Parallel()
-			original := reflect.ValueOf(tc)
-			copy := deepCopySlice(original)
-			require.True(t, copy.CanInterface())
-			copyInterface := copy.Interface()
-			assert.Equal(t, tc, copyInterface)
-			assertAddressesAreDifferent(t, tc, copyInterface)
-		})
-	}
+	one := 1
+	t.Run("empty slice", func(t *testing.T) {
+		// empty slice pointer does not change but that is ok
+		// as appending would create another slice
+		t.Parallel()
+		slice := []int{}
+		original := reflect.ValueOf(slice)
+		copy := deepCopySlice(original)
+		require.True(t, copy.CanInterface())
+		copyInterface := copy.Interface()
+		assert.Equal(t, slice, copyInterface)
+		anotherSlice := append(slice, 1)
+		assertAddressesAreDifferent(t, copyInterface, anotherSlice)
+	})
+	t.Run("nil slice", func(t *testing.T) {
+		t.Parallel()
+		slice := []int(nil)
+		original := reflect.ValueOf(slice)
+		copy := deepCopySlice(original)
+		require.True(t, copy.CanInterface())
+		copyInterface := copy.Interface()
+		assert.Len(t, copyInterface, 0)
+	})
+	t.Run("slice of integers", func(t *testing.T) {
+		t.Parallel()
+		slice := []int{1, 2, 3}
+		original := reflect.ValueOf(slice)
+		copy := deepCopySlice(original)
+		require.True(t, copy.CanInterface())
+		copyInterface := copy.Interface()
+		assert.Equal(t, slice, copyInterface)
+		assertAddressesAreDifferent(t, slice, copyInterface)
+	})
+	t.Run("slice of pointers", func(t *testing.T) {
+		t.Parallel()
+		slice := []*int{&one}
+		original := reflect.ValueOf(slice)
+		copy := deepCopySlice(original)
+		require.True(t, copy.CanInterface())
+		copyInterface := copy.Interface()
+		assert.Equal(t, slice, copyInterface)
+		assertAddressesAreDifferent(t, slice, copyInterface)
+		copySlice := copyInterface.([]*int)
+		assertAddressesAreDifferent(t, slice[0], copySlice[0])
+	})
 }
 
+func Test_deepCopyArray(t *testing.T) {
+	t.Parallel()
+	one := 1
+	t.Run("zero array", func(t *testing.T) {
+		// zero array pointer does not change but that is ok
+		// as no element can be changed
+		t.Parallel()
+		array := [0]int{}
+		original := reflect.ValueOf(array)
+		copy := deepCopyArray(original)
+		require.True(t, copy.CanInterface())
+		copyInterface := copy.Interface()
+		assert.Equal(t, array, copyInterface)
+	})
+	t.Run("array with nil pointer", func(t *testing.T) {
+		t.Parallel()
+		array := [1]*int{nil}
+		original := reflect.ValueOf(array)
+		copy := deepCopyArray(original)
+		require.True(t, copy.CanInterface())
+		copyInterface := copy.Interface()
+		assert.Equal(t, array, copyInterface)
+		copyArray, ok := copyInterface.([1]*int)
+		require.True(t, ok)
+		assert.Nil(t, copyArray[0])
+	})
+	t.Run("array with integers", func(t *testing.T) {
+		t.Parallel()
+		array := [3]int{1, 2, 3}
+		original := reflect.ValueOf(array)
+		copy := deepCopyArray(original)
+		require.True(t, copy.CanInterface())
+		copyInterface := copy.Interface()
+		assert.Equal(t, array, copyInterface)
+		assertAddressesAreDifferent(t, array, copyInterface)
+	})
+	t.Run("array with integer pointer", func(t *testing.T) {
+		t.Parallel()
+		arr := [1]*int{&one}
+		original := reflect.ValueOf(arr)
+		copy := deepCopy(original)
+		require.True(t, copy.CanInterface())
+		copyInterface := copy.Interface()
+		assert.Equal(t, arr, copyInterface)
+		assertAddressesAreDifferent(t, arr, copyInterface)
+		copyArr, ok := copyInterface.([1]*int)
+		require.True(t, ok)
+		assertAddressesAreDifferent(t, arr[0], copyArr[0])
+		*copyArr[0] = 2
+		assert.NotEqual(t, copyArr, arr)
+	})
+}
+
+// TODO test nested deep copy
 func Test_deepCopyMap(t *testing.T) {
 	t.Parallel()
 	tests := map[string]interface{}{
@@ -249,6 +328,7 @@ func Test_deepCopyPointer(t *testing.T) {
 	}
 }
 
+// TODO test nested deep copy
 func Test_deepCopyStruct(t *testing.T) {
 	t.Parallel()
 	tests := map[string]interface{}{
@@ -278,7 +358,7 @@ func Test_deepCopyStruct(t *testing.T) {
 	}
 }
 
-func Test_deepCopyFunc(t *testing.T) {
+func Test_deepCopy_Func(t *testing.T) {
 	t.Parallel()
 	f := func(a int) int { return a + 1 }
 	original := reflect.ValueOf(f)
@@ -290,4 +370,20 @@ func Test_deepCopyFunc(t *testing.T) {
 	assert.Equal(t, f(0), g(0))
 	g = func(a int) int { return a + 2 }
 	assert.NotEqual(t, f(0), g(0))
+}
+
+func Test_deepCopyChan(t *testing.T) {
+	t.Parallel()
+	c := make(chan int, 1)
+	original := reflect.ValueOf(c)
+	copy := deepCopy(original)
+	require.True(t, copy.CanInterface())
+	copyInterface := copy.Interface()
+	c2, ok := copyInterface.(chan int)
+	require.True(t, ok)
+	c2 <- 0
+	assert.Len(t, c2, 1)
+	assert.Len(t, c, 0)
+	close(c2)
+	close(c)
 }

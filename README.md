@@ -22,9 +22,9 @@ It works with:
 - pointers
 - nested pointers
 - structs (even with unexported fields)
+- arrays
 - functions (cannot change the pointer though)
-- channels **soon**
-- arrays **soon**
+- channels (does not deep copy elements IN the channel for now)
 
 ## Setup
 
