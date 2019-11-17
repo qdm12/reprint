@@ -6,7 +6,7 @@ import (
 	"unsafe"
 )
 
-// This deep copies original and returns the copy
+// This deep copies original and returns the copy as an interface.
 func This(original interface{}) (copy interface{}) {
 	if original == nil {
 		return nil
@@ -15,7 +15,7 @@ func This(original interface{}) (copy interface{}) {
 	return deepCopy(value).Interface()
 }
 
-// FromTo deep copies original and assigns the copy to the copy argument
+// FromTo deep copies original and assigns the copy to the copy argument (pointer).
 func FromTo(original, copy interface{}) error {
 	if original == nil {
 		copy = nil
@@ -60,9 +60,7 @@ func deepCopy(original reflect.Value) reflect.Value {
 	}
 }
 
-// TODO needed?
-// forceCopyValue simply creates a new pointer and sets its value
-// to the original.
+// forceCopyValue simply creates a new pointer and sets its value to the original.
 func forceCopyValue(original reflect.Value) reflect.Value {
 	originalType := original.Type()
 	newPointer := reflect.New(originalType)
@@ -81,7 +79,7 @@ func deepCopySlice(original reflect.Value) reflect.Value {
 
 func deepCopyArray(original reflect.Value) reflect.Value {
 	if original.Len() == 0 {
-		// cannot change it anyway, so we can return the original
+		// it cannot be changed anyway, so we can return the original
 		return original
 	}
 	elementType := original.Index(0).Type()
@@ -130,7 +128,5 @@ func deepCopyStruct(original reflect.Value) reflect.Value {
 }
 
 func deepCopyChan(original reflect.Value) reflect.Value {
-	// TODO maybe change references of elements inside channel?
-	// beware of race conditions?
 	return reflect.MakeChan(original.Type(), original.Cap())
 }
