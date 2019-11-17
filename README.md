@@ -16,7 +16,7 @@
 Unlike most libraries out there, this one deep copies by assigning new pointers to all data structures
 nested in a given object, hence doing it **THE RIGHT WAY :tm:**
 
-It works with slices, arrays, maps, pointers, nested pointers, nils, structs (with unexported fields too), functions  and channels
+It works with slices, arrays, maps, pointers, nested pointers, nils, structs (with unexported fields too), functions  and channels.
 
 *Limits*:
 
@@ -28,6 +28,8 @@ It works with slices, arrays, maps, pointers, nested pointers, nils, structs (wi
 ```sh
 go get -u github.com/qdm12/reprint
 ```
+
+You can check out [Golang Playground](https://play.golang.org/p/ukbIYl_gLqu) and activate **Imports** at the top, or read this:
 
 ```go
 package main
