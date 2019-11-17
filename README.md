@@ -16,24 +16,18 @@
 Unlike most libraries out there, this one deep copies by assigning new pointers to all data structures
 nested in a given object, hence doing it **THE RIGHT WAY :tm:**
 
-It works with:
+It works with slices, arrays, maps, pointers, nested pointers, nils, structs (with unexported fields too), functions  and channels
 
-- slices
-- maps
-- pointers
-- nested pointers
-- structs (even with unexported fields)
-- arrays
-- functions (cannot change the pointer though)
-- channels (does not deep copy elements IN the channel for now)
+*Limits*:
 
-## Setup
+- Functions pointers are not changed but that's by design
+- Channels buffered elements are not deep copied
+
+## Usage
 
 ```sh
 go get -u github.com/qdm12/reprint
 ```
-
-## Usage
 
 ```go
 package main
@@ -52,7 +46,7 @@ func main() {
     // reprint.FromTo usage:
     var x, y myType
     x.A = &one
-    reprint.FromTo(&x, &y)
+    reprint.FromTo(&x, &y) // you can check the error returned also
     y.A = &two
     fmt.Println(x.A, *x.A) // 0xc0000a0010 1
     fmt.Println(y.A, *y.A) // 0xc0000a0018 2
@@ -67,10 +61,6 @@ func main() {
 }
 ```
 
-## Limits
-
-- Does not support `UintPtr` and `UnsafePointer` types (untested)
-
 ## Development
 
 1. Install [Docker](https://docs.docker.com/install/)
@@ -82,9 +72,11 @@ func main() {
 
 ## TODOs
 
-- Verify it works for types:
-    - [x] Func
-    - [ ] Chan
-    - [ ] Array
-- Finish `FromTo` corner cases (nil pointers etc.)
+- (Research) deep copy elements currently in channel
+    - Race conditions
+    - Pause channel?
+- Polish `FromTo`
+    - Initialize copy to copy's type if it's a typed nil
+    - Initialize copy to original's type if it's an untyped nil
+    - Returns typed nil instead of untyped nil if original is a nil pointer (typed)
 - `forceCopyValue` might not be needed
