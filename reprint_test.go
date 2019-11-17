@@ -231,8 +231,8 @@ func Test_deepCopySlice(t *testing.T) {
 func Test_deepCopyArray(t *testing.T) {
 	t.Parallel()
 	one := 1
-	t.Run("zero array", func(t *testing.T) {
-		// zero array pointer does not change but that is ok
+	t.Run("empty array", func(t *testing.T) {
+		// empty array pointer does not change but that is ok
 		// as no element can be changed
 		t.Parallel()
 		array := [0]int{}
@@ -253,6 +253,7 @@ func Test_deepCopyArray(t *testing.T) {
 		copyArray, ok := copyInterface.([1]*int)
 		require.True(t, ok)
 		assert.Nil(t, copyArray[0])
+		assertAddressesAreDifferent(t, original, copyArray)
 	})
 	t.Run("array with integers", func(t *testing.T) {
 		t.Parallel()
@@ -266,40 +267,74 @@ func Test_deepCopyArray(t *testing.T) {
 	})
 	t.Run("array with integer pointer", func(t *testing.T) {
 		t.Parallel()
-		arr := [1]*int{&one}
-		original := reflect.ValueOf(arr)
-		copy := deepCopy(original)
+		array := [1]*int{&one}
+		original := reflect.ValueOf(array)
+		copy := deepCopyArray(original)
 		require.True(t, copy.CanInterface())
 		copyInterface := copy.Interface()
-		assert.Equal(t, arr, copyInterface)
-		assertAddressesAreDifferent(t, arr, copyInterface)
+		assert.Equal(t, array, copyInterface)
+		assertAddressesAreDifferent(t, array, copyInterface)
 		copyArr, ok := copyInterface.([1]*int)
 		require.True(t, ok)
-		assertAddressesAreDifferent(t, arr[0], copyArr[0])
+		assertAddressesAreDifferent(t, array[0], copyArr[0])
 		*copyArr[0] = 2
-		assert.NotEqual(t, copyArr, arr)
+		assert.NotEqual(t, copyArr, array)
 	})
 }
 
-// TODO test nested deep copy
 func Test_deepCopyMap(t *testing.T) {
 	t.Parallel()
-	tests := map[string]interface{}{
-		"empty map":       map[int]int{},
-		"map of integers": map[int]int{1: 1, 2: 2, 3: 3},
-	}
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
-			tc := tc
-			t.Parallel()
-			original := reflect.ValueOf(tc)
-			copy := deepCopyMap(original)
-			require.True(t, copy.CanInterface())
-			copyInterface := copy.Interface()
-			assertAddressesAreDifferent(t, tc, copyInterface)
-			assert.Equal(t, tc, copyInterface)
-		})
-	}
+	one := 1
+	t.Run("empty slice", func(t *testing.T) {
+		// zero slice pointer does not change but that is ok
+		// as it cannot be changed and append would create another
+		// slice.
+		t.Parallel()
+		slice := []int{}
+		original := reflect.ValueOf(slice)
+		copy := deepCopySlice(original)
+		require.True(t, copy.CanInterface())
+		copyInterface := copy.Interface()
+		assert.Equal(t, slice, copyInterface)
+	})
+	t.Run("slice with nil pointer", func(t *testing.T) {
+		t.Parallel()
+		slice := []*int{nil}
+		original := reflect.ValueOf(slice)
+		copy := deepCopySlice(original)
+		require.True(t, copy.CanInterface())
+		copyInterface := copy.Interface()
+		assert.Equal(t, slice, copyInterface)
+		copySlice, ok := copyInterface.([]*int)
+		require.True(t, ok)
+		assertAddressesAreDifferent(t, slice, copySlice)
+		assert.Nil(t, copySlice[0])
+	})
+	t.Run("slice with integers", func(t *testing.T) {
+		t.Parallel()
+		slice := []int{1, 2, 3}
+		original := reflect.ValueOf(slice)
+		copy := deepCopySlice(original)
+		require.True(t, copy.CanInterface())
+		copyInterface := copy.Interface()
+		assert.Equal(t, slice, copyInterface)
+		assertAddressesAreDifferent(t, slice, copyInterface)
+	})
+	t.Run("array with integer pointer", func(t *testing.T) {
+		t.Parallel()
+		slice := []*int{&one}
+		original := reflect.ValueOf(slice)
+		copy := deepCopySlice(original)
+		require.True(t, copy.CanInterface())
+		copyInterface := copy.Interface()
+		assert.Equal(t, slice, copyInterface)
+		assertAddressesAreDifferent(t, slice, copyInterface)
+		copySlice, ok := copyInterface.([]*int)
+		require.True(t, ok)
+		assertAddressesAreDifferent(t, slice[0], copySlice[0])
+		*copySlice[0] = 2
+		assert.NotEqual(t, copySlice, slice)
+	})
 }
 
 func Test_deepCopyPointer(t *testing.T) {
@@ -328,21 +363,22 @@ func Test_deepCopyPointer(t *testing.T) {
 	}
 }
 
-// TODO test nested deep copy
 func Test_deepCopyStruct(t *testing.T) {
 	t.Parallel()
+	type structExported struct{ A int }
+	type structUnexported struct{ a int }
 	tests := map[string]interface{}{
-		"empty struct":                   struct{}{},
-		"simple struct":                  struct{ A int }{1},
-		"simple struct unexported field": struct{ a int }{1},
-		"empty struct of pointers of structs": struct {
-			A *struct{ A int }
-			B *struct{ B int }
+		"empty struct":            struct{}{},
+		"exported field struct":   structExported{1},
+		"unexported field struct": structUnexported{1},
+		"nil struct pointers struct": struct {
+			A *structExported
+			B *structUnexported
 		}{},
 		"struct of pointers of structs": struct {
-			A *struct{ A int }
-			B *struct{ B int }
-		}{&struct{ A int }{1}, &struct{ B int }{2}},
+			A *structExported
+			B *structUnexported
+		}{&structExported{1}, &structUnexported{2}},
 	}
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
@@ -356,6 +392,22 @@ func Test_deepCopyStruct(t *testing.T) {
 			assertAddressesAreDifferent(t, tc, copyInterface)
 		})
 	}
+	t.Run("deep copy", func(t *testing.T) {
+		t.Parallel()
+		one := 1
+		type structUnexportedPointer struct{ A *int }
+		obj := structUnexportedPointer{&one}
+		original := reflect.ValueOf(obj)
+		copy := deepCopyStruct(original)
+		require.True(t, copy.CanInterface())
+		copyInterface := copy.Interface()
+		assert.Equal(t, obj, copyInterface)
+		assertAddressesAreDifferent(t, obj, copyInterface)
+		copyStruct, ok := copyInterface.(structUnexportedPointer)
+		require.True(t, ok)
+		*copyStruct.A = 2
+		assert.NotEqual(t, copyStruct, obj)
+	})
 }
 
 func Test_deepCopy_Func(t *testing.T) {
