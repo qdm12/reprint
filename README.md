@@ -2,7 +2,7 @@
 
 *Reprint is a Go library to deep copy any object THE RIGHT WAY :tm:*
 
-[![reprint](https://github.com/qdm12/reprint/raw/master/title.png)](https://hub.docker.com/r/qmcgaw/REPONAME_DOCKER)
+[![reprint](https://github.com/qdm12/reprint/raw/master/title.png)](https://github.com/qdm12/reprint)
 
 [![Build Status](https://travis-ci.org/qdm12/reprint.svg?branch=master)](https://travis-ci.org/qdm12/reprint)
 
