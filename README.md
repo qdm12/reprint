@@ -4,6 +4,7 @@
 
 [![reprint](https://github.com/qdm12/reprint/raw/master/title.png)](https://github.com/qdm12/reprint)
 
+[![Join Slack channel](https://img.shields.io/badge/slack-@qdm12-yellow.svg?logo=slack)](https://join.slack.com/t/qdm12/shared_invite/enQtODMwMDQyMTAxMjY1LTU1YjE1MTVhNTBmNTViNzJiZmQwZWRmMDhhZjEyNjVhZGM4YmIxOTMxOTYzN2U0N2U2YjQ2MDk3YmYxN2NiNTc)
 [![Build Status](https://travis-ci.org/qdm12/reprint.svg?branch=master)](https://travis-ci.org/qdm12/reprint)
 
 [![GitHub last commit](https://img.shields.io/github/last-commit/qdm12/reprint.svg)](https://github.com/qdm12/reprint/issues)
