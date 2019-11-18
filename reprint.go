@@ -94,6 +94,9 @@ func deepCopyArray(original reflect.Value) reflect.Value {
 }
 
 func deepCopyMap(original reflect.Value) reflect.Value {
+	if original.IsNil() {
+		return original
+	}
 	keyType := original.Type().Key()
 	valueType := original.Type().Elem()
 	mapType := reflect.MapOf(keyType, valueType)

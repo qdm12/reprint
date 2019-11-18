@@ -284,56 +284,64 @@ func Test_deepCopyArray(t *testing.T) {
 
 func Test_deepCopyMap(t *testing.T) {
 	t.Parallel()
-	one := 1
-	t.Run("empty slice", func(t *testing.T) {
-		// zero slice pointer does not change but that is ok
-		// as it cannot be changed and append would create another
-		// slice.
+	t.Run("nil map", func(t *testing.T) {
+		// returns the original which is nil
 		t.Parallel()
-		slice := []int{}
-		original := reflect.ValueOf(slice)
-		copy := deepCopySlice(original)
+		var m map[int]int
+		original := reflect.ValueOf(m)
+		copy := deepCopyMap(original)
 		require.True(t, copy.CanInterface())
 		copyInterface := copy.Interface()
-		assert.Equal(t, slice, copyInterface)
+		assert.Equal(t, m, copyInterface)
 	})
-	t.Run("slice with nil pointer", func(t *testing.T) {
+	t.Run("empty map", func(t *testing.T) {
 		t.Parallel()
-		slice := []*int{nil}
-		original := reflect.ValueOf(slice)
-		copy := deepCopySlice(original)
+		m := map[int]int{}
+		original := reflect.ValueOf(m)
+		copy := deepCopyMap(original)
 		require.True(t, copy.CanInterface())
 		copyInterface := copy.Interface()
-		assert.Equal(t, slice, copyInterface)
-		copySlice, ok := copyInterface.([]*int)
+		assert.Equal(t, m, copyInterface)
+		assertAddressesAreDifferent(t, m, copyInterface)
+	})
+	t.Run("map with nil pointer", func(t *testing.T) {
+		t.Parallel()
+		m := map[int]*int{0: nil}
+		original := reflect.ValueOf(m)
+		copy := deepCopyMap(original)
+		require.True(t, copy.CanInterface())
+		copyInterface := copy.Interface()
+		assert.Equal(t, m, copyInterface)
+		copyMap, ok := copyInterface.(map[int]*int)
 		require.True(t, ok)
-		assertAddressesAreDifferent(t, slice, copySlice)
-		assert.Nil(t, copySlice[0])
+		assertAddressesAreDifferent(t, m, copyMap)
+		assert.Nil(t, copyMap[0])
 	})
-	t.Run("slice with integers", func(t *testing.T) {
+	t.Run("map with integers", func(t *testing.T) {
 		t.Parallel()
-		slice := []int{1, 2, 3}
-		original := reflect.ValueOf(slice)
-		copy := deepCopySlice(original)
+		m := map[int]int{1: 1, 2: 2, 3: 3}
+		original := reflect.ValueOf(m)
+		copy := deepCopyMap(original)
 		require.True(t, copy.CanInterface())
 		copyInterface := copy.Interface()
-		assert.Equal(t, slice, copyInterface)
-		assertAddressesAreDifferent(t, slice, copyInterface)
+		assert.Equal(t, m, copyInterface)
+		assertAddressesAreDifferent(t, m, copyInterface)
 	})
-	t.Run("array with integer pointer", func(t *testing.T) {
+	t.Run("map with integer pointer", func(t *testing.T) {
 		t.Parallel()
-		slice := []*int{&one}
-		original := reflect.ValueOf(slice)
-		copy := deepCopySlice(original)
+		one := 1
+		m := map[int]*int{0: &one}
+		original := reflect.ValueOf(m)
+		copy := deepCopyMap(original)
 		require.True(t, copy.CanInterface())
 		copyInterface := copy.Interface()
-		assert.Equal(t, slice, copyInterface)
-		assertAddressesAreDifferent(t, slice, copyInterface)
-		copySlice, ok := copyInterface.([]*int)
+		assert.Equal(t, m, copyInterface)
+		assertAddressesAreDifferent(t, m, copyInterface)
+		copyMap, ok := copyInterface.(map[int]*int)
 		require.True(t, ok)
-		assertAddressesAreDifferent(t, slice[0], copySlice[0])
-		*copySlice[0] = 2
-		assert.NotEqual(t, copySlice, slice)
+		assertAddressesAreDifferent(t, m[0], copyMap[0])
+		*copyMap[0] = 2
+		assert.NotEqual(t, copyMap, m)
 	})
 }
 
