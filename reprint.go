@@ -69,6 +69,9 @@ func forceCopyValue(original reflect.Value) reflect.Value {
 }
 
 func deepCopySlice(original reflect.Value) reflect.Value {
+	if original.IsNil() {
+		return original
+	}
 	copy := reflect.MakeSlice(original.Type(), 0, 0)
 	for i := 0; i < original.Len(); i++ {
 		elementCopy := deepCopy(original.Index(i))

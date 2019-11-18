@@ -182,6 +182,14 @@ func Test_forceCopyValue(t *testing.T) {
 func Test_deepCopySlice(t *testing.T) {
 	t.Parallel()
 	one := 1
+	t.Run("not initialized slice", func(t *testing.T) {
+		t.Parallel()
+		var slice []int
+		original := reflect.ValueOf(slice)
+		copy := deepCopySlice(original)
+		require.True(t, copy.CanInterface())
+		assert.Equal(t, slice, copy.Interface())
+	})
 	t.Run("empty slice", func(t *testing.T) {
 		// empty slice pointer does not change but that is ok
 		// as appending would create another slice
@@ -231,6 +239,14 @@ func Test_deepCopySlice(t *testing.T) {
 func Test_deepCopyArray(t *testing.T) {
 	t.Parallel()
 	one := 1
+	t.Run("not initialized array", func(t *testing.T) {
+		t.Parallel()
+		var array [1]int
+		original := reflect.ValueOf(array)
+		copy := deepCopyArray(original)
+		require.True(t, copy.CanInterface())
+		assert.Equal(t, array, copy.Interface())
+	})
 	t.Run("empty array", func(t *testing.T) {
 		// empty array pointer does not change but that is ok
 		// as no element can be changed
